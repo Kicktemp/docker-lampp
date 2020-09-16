@@ -1,62 +1,147 @@
 version: '3'
 services:
 
+  apache24:
+    build:
+      context: .
+      dockerfile: ./.builds/apache24/Dockerfile
+      args:
+        MY_TZ: ${MY_TZ:-UTC}
+    container_name: apache24
+    links:
+      - mysql
+      - php56-fpm
+      - php73-fpm
+      - php74-fpm
+      - mailhog
+    volumes:
+      - ./.config/apache24/httpd.conf /usr/local/apache2/conf/httpd.conf
+      - ./.config/apache24/conf.d:/usr/local/apache2/conf.d
+      - ./.config/apache24/vhosts:/usr/local/apache2/vhosts
+      - ${LOG_DIR:-./.data/logs}:/var/log
+      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
+      - pma:/var/www/html/pma
+    ports:
+      - "80:${MAP_POT_80:-8074}"
+      - "8000:8000"
+      - "8056:8056"
+      - "8073:8073"
+      - "8074:8074"
+    environment:
+      LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+    networks:
+      - lampp
+
+  php56-fpm:
+    build:
+      context: .
+      dockerfile: ./.builds/php56-fpm/Dockerfile
+      args:
+        MY_TZ: ${MY_TZ:-UTC}
+    container_name: php56-fpm
+    links:
+      - mailhog
+      - mysql
+    volumes:
+      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf
+      - ./.config/php/php56/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
+      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
+      - ./.config/php/php56/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
+      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
+    environment:
+      LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+    networks:
+      - lampp
+
+  php73-fpm:
+    build:
+      context: .
+      dockerfile: ./.builds/php73-fpm/Dockerfile
+      args:
+        MY_TZ: ${MY_TZ:-UTC}
+    container_name: php73-fpm
+    links:
+      - mailhog
+      - mysql
+    volumes:
+      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf
+      - ./.config/php/php73/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
+      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
+      - ./.config/php/php73/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
+      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
+    environment:
+      LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+    networks:
+      - lampp
+
+  php74-fpm:
+    build:
+      context: .
+      dockerfile: ./.builds/php74-fpm/Dockerfile
+      args:
+        MY_TZ: ${MY_TZ:-UTC}
+    container_name: php74-fpm
+    links:
+      - mailhog
+      - mysql
+    volumes:
+      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf
+      - ./.config/php/php74/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
+      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
+      - ./.config/php/php74/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
+      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
+    environment:
+      LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+    networks:
+      - lampp
+
   mysql:
-    image: mariadb:10.5
+    build:
+      context: .
+      dockerfile: ./.builds/mariadb/Dockerfile
+      args:
+        MY_TZ: ${MY_TZ:-UTC}
     container_name: mysql
-    restart: always
+    restart: unless-stopped
     volumes:
       # MySQL data files go in ../data/mysql
-      - ${MYSQL_DATA_DIR:-./data/mysql}:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:-./.data/mysql}:/var/lib/mysql
     environment:
+      LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWD:-root}
     ports:
       - "3306:3306"
+    networks:
+      - lampp
 
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mailhog
-    restart: always
     ports:
       - "8025:8025"
       - "1025:1025"
-
-  webserver:
-    build: phpfarm
-    container_name: webserver
-    restart: always
-    ports:
-      # Expose PHP/Apache ports.
-      - "8053:8053"
-      - "8056:8056"
-      - "8073:8073"
-      - "8074:8074"
-      - "80:${MAP_POT_80:-8074}"
-    working_dir: "/var/www"
-    volumes:
-      # PHP code files go in ../data/php
-      - ${PHP_BASE_DIR:-./data/www}:/var/www
-      - ${LOG_DIR:-./data/logs}:/var/log/apache2
-      - ./phpfarm/apache/apache2.conf:/etc/apache2/apache2.conf
-      - ./phpfarm/apache/conf.d:/etc/apache2/conf.d
-      - ./phpfarm/apache/sites-enabled:/etc/apache2/sites-enabled
-    links:
-      - mysql
-      - mailhog
-      - phpmyadmin
-#    environment:
-#      - FORWARD_PORTS_TO_LOCALHOST=3306:mysql:3306
+    networks:
+      - lampp
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin:fpm-alpine
     container_name: phpmyadmin
     links:
       - mysql
+    volumes:
+      - ./.config/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php
+      - pma:/var/www/html
     environment:
+      LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       PMA_HOST: mysql
       PMA_PORT: 3306
+      UPLOAD_LIMIT: 128M
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWD:-root}
-    ports:
-      - '8000:80'
-    volumes:
-      - ${PHP_BASE_DIR:-./data/www}/.php/99-php-overrides.ini:/usr/local/etc/php/conf.d/99-mysql.ini
+    networks:
+      - lampp
+
+volumes:
+  pma:
+
+networks:
+  lampp:
