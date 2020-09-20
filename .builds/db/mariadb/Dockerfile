@@ -2,7 +2,7 @@ FROM alpine:edge
 
 ENV ENV="/etc/profile"
 
-COPY ./.builds/aliase.sh /etc/profile.d/
+COPY ./.builds/shared/aliase.sh /etc/profile.d/
 
 ARG MY_TZ
 RUN set -eux; \
@@ -32,7 +32,7 @@ RUN sed -Ei 's/^(bind-address|log)/#&/' /etc/my.cnf && \
 
 VOLUME /var/lib/mysql
 
-COPY ./.builds/mariadb/docker-entrypoint.sh /usr/local/bin/
+COPY ./.builds/db/mariadb/docker-entrypoint.sh /usr/local/bin/
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 EXPOSE 3306

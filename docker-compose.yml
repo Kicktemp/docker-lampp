@@ -2,9 +2,10 @@ version: '3'
 services:
 
   apache24:
+    image: degobbis/apache24-alpine
     build:
       context: .
-      dockerfile: ./.builds/apache24/Dockerfile
+      dockerfile: ./.builds/httpd/apache24/Dockerfile
       args:
         MY_TZ: ${MY_TZ:-UTC}
     container_name: apache24
@@ -15,12 +16,13 @@ services:
       - php74-fpm
       - mailhog
     volumes:
-      - ./.config/apache24/httpd.conf /usr/local/apache2/conf/httpd.conf
-      - ./.config/apache24/conf.d:/usr/local/apache2/conf.d
-      - ./.config/apache24/vhosts:/usr/local/apache2/vhosts
+      - ./.config/httpd/apache24/httpd.conf /usr/local/apache2/conf/httpd.conf
+      - ./.config/httpd/apache24/conf.d:/usr/local/apache2/conf.d
+      - ./.config/httpd/apache24/vhosts:/usr/local/apache2/vhosts
       - ${LOG_DIR:-./.data/logs}:/var/log
-      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
-      - pma:/var/www/html/pma
+      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - pma:/srv/pma
+      - phpsocket:/run/php
     ports:
       - "80:${MAP_POT_80:-8074}"
       - "8000:8000"
@@ -29,13 +31,16 @@ services:
       - "8074:8074"
     environment:
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+      APP_USER_ID: ${APP_USER_ID:-1000}
+      APP_GROUP_ID: ${APP_GROUP_ID:-1000}
     networks:
       - lampp
 
   php56-fpm:
+    image: degobbis/php56-fpm-alpine
     build:
       context: .
-      dockerfile: ./.builds/php56-fpm/Dockerfile
+      dockerfile: ./.builds/php/php56-fpm/Dockerfile
       args:
         MY_TZ: ${MY_TZ:-UTC}
     container_name: php56-fpm
@@ -47,16 +52,20 @@ services:
       - ./.config/php/php56/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
       - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
       - ./.config/php/php56/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
-      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
+      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - phpsocket:/run/php
     environment:
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+      APP_USER_ID: ${APP_USER_ID:-1000}
+      APP_GROUP_ID: ${APP_GROUP_ID:-1000}
     networks:
       - lampp
 
   php73-fpm:
+    image: degobbis/php73-fpm-alpine
     build:
       context: .
-      dockerfile: ./.builds/php73-fpm/Dockerfile
+      dockerfile: ./.builds/php/php73-fpm/Dockerfile
       args:
         MY_TZ: ${MY_TZ:-UTC}
     container_name: php73-fpm
@@ -68,16 +77,20 @@ services:
       - ./.config/php/php73/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
       - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
       - ./.config/php/php73/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
-      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
+      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - phpsocket:/run/php
     environment:
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+      APP_USER_ID: ${APP_USER_ID:-1000}
+      APP_GROUP_ID: ${APP_GROUP_ID:-1000}
     networks:
       - lampp
 
   php74-fpm:
+    image: degobbis/php74-fpm-alpine
     build:
       context: .
-      dockerfile: ./.builds/php74-fpm/Dockerfile
+      dockerfile: ./.builds/php/php74-fpm/Dockerfile
       args:
         MY_TZ: ${MY_TZ:-UTC}
     container_name: php74-fpm
@@ -89,23 +102,26 @@ services:
       - ./.config/php/php74/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
       - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
       - ./.config/php/php74/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
-      - ${WWW_BASEDIR:-./.data/www}:/var/www/html/vhosts
+      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - phpsocket:/run/php
     environment:
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
+      APP_USER_ID: ${APP_USER_ID:-1000}
+      APP_GROUP_ID: ${APP_GROUP_ID:-1000}
     networks:
       - lampp
 
   mysql:
+    image: degobbis/mariadb-alpine
     build:
       context: .
-      dockerfile: ./.builds/mariadb/Dockerfile
+      dockerfile: ./.builds/db/mariadb/Dockerfile
       args:
         MY_TZ: ${MY_TZ:-UTC}
     container_name: mysql
     restart: unless-stopped
     volumes:
-      # MySQL data files go in ../data/mysql
-      - ${MYSQL_DATA_DIR:-./.data/mysql}:/var/lib/mysql
+      - db-data-dir:/var/lib/mysql
     environment:
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWD:-root}
@@ -136,12 +152,15 @@ services:
       PMA_HOST: mysql
       PMA_PORT: 3306
       UPLOAD_LIMIT: 128M
+      PMA_ARBITRARY: 1
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWD:-root}
     networks:
       - lampp
 
 volumes:
   pma:
+  db-data-dir:
+  phpsocket:
 
 networks:
   lampp:

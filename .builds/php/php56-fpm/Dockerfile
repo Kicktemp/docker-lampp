@@ -1,4 +1,6 @@
-FROM php:7.3-fpm-alpine
+FROM php:5.6-fpm-alpine
+
+COPY ./.builds/shared/aliase.sh /etc/profile.d/
 
 ENV ENV="/etc/profile"
 ENV PHPIZE_DEPS \
@@ -16,13 +18,12 @@ ENV PHPIZE_DEPS \
 ARG MY_TZ
 RUN set -eux; \
     apk upgrade --update; \
-    apk add -U tzdata; \
+    apk add -U tzdata shadow; \
     cp /usr/share/zoneinfo/${MY_TZ} /etc/localtime; \
     apk del tzdata; \
     rm -rf /var/cache/apk/*
 
-COPY ./.builds/install-php-extensions /usr/local/bin/
-COPY ./.builds/aliase.sh /etc/profile.d/
+COPY ./.builds/php/install-php-extensions /usr/local/bin/
 
 RUN install-php-extensions \
         bcmath \
@@ -30,19 +31,26 @@ RUN install-php-extensions \
         calendar \
         exif \
         gd \
+        gettext \
+        gmp \
         imap \
         intl \
         ldap \
         mysqli \
         opcache \
-        pcntl \
         pdo_mysql \
-        pdo_pgsql \
-        pgsql \
+        soap \
         sockets \
         xdebug \
+        xmlrpc \
         xsl \
         zip
 
+WORKDIR "/srv/www"
+
+COPY ./.builds/shared/httpd-php-entrypoint.sh /usr/local/bin/
+COPY ./.builds/shared/create_user.sh /usr/local/bin/
+
 EXPOSE 9000
-CMD ["/usr/local/sbin/php-fpm"]
+ENTRYPOINT ["httpd-php-entrypoint.sh","php-fpm"]
+#CMD ["/usr/local/sbin/php-fpm"]
