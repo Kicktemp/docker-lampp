@@ -1,22 +1,16 @@
 FROM alpine:edge
 
-ENV ENV="/etc/profile"
-
-COPY ./.builds/shared/aliase.sh /etc/profile.d/
+COPY ./shared/aliase.sh /etc/profile.d/
 
 ARG MY_TZ
+ENV TZ=${MY_TZ} \
+    ENV="/etc/profile"
+
 RUN set -eux; \
     apk upgrade --update; \
-    apk add -U tzdata; \
-    cp /usr/share/zoneinfo/${MY_TZ} /etc/localtime; \
-    apk del tzdata; \
-    rm -rf /var/cache/apk/*
-
-RUN mkdir /docker-entrypoint-initdb.d && \
-    apk -U upgrade && \
-    apk add --no-cache mariadb mariadb-client && \
-    apk add --no-cache tzdata && \
-    # clean up
+    apk add --no-cache tzdata shadow mariadb mariadb-client; \
+    ln -sf /usr/share/zoneinfo/${MY_TZ} /etc/localtime; \
+    mkdir /docker-entrypoint-initdb.d; \
     rm -rf /var/cache/apk/*
 
 # comment out a few problematic configuration values
@@ -32,9 +26,11 @@ RUN sed -Ei 's/^(bind-address|log)/#&/' /etc/my.cnf && \
 
 VOLUME /var/lib/mysql
 
-COPY ./.builds/db/mariadb/docker-entrypoint.sh /usr/local/bin/
-ENTRYPOINT ["docker-entrypoint.sh"]
+COPY ./db/docker-entrypoint.sh /usr/local/bin/
+RUN set -eux; \
+    find /usr/local/bin -type f -exec chmod +x {} \;
 
+STOPSIGNAL SIGQUIT
 EXPOSE 3306
-# Default arguments passed to ENTRYPOINT if no arguments are passed when starting container
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["mysqld_safe"]

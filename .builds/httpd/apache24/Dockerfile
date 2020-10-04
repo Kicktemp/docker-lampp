@@ -1,22 +1,28 @@
-FROM httpd:2.4-alpine
+ARG VERSION
+ARG TAG="${VERSION:-2.4}-alpine"
 
-COPY ./.builds/shared/aliase.sh /etc/profile.d/
+FROM httpd:${TAG}
 
-ENV ENV="/etc/profile"
+COPY ./shared/aliase.sh /etc/profile.d/
 
 ARG MY_TZ
+ENV TZ=${MY_TZ} \
+    ENV="/etc/profile"
+
 RUN set -eux; \
     apk upgrade --update; \
     apk add -U tzdata shadow; \
-    cp /usr/share/zoneinfo/${MY_TZ} /etc/localtime; \
-    apk del tzdata; \
+    ln -sf /usr/share/zoneinfo/${MY_TZ} /etc/localtime; \
     rm -rf /var/cache/apk/*
 
-WORKDIR "/srv/www"
+COPY ./httpd/apache24/config/httpd.conf /usr/local/apache2/conf/
+COPY ./shared/httpd-php-entrypoint.sh /usr/local/bin/
+COPY ./shared/create_user.sh /usr/local/bin/
 
-COPY ./.builds/httpd/apache24/config/httpd.conf /usr/local/apache2/conf/
-COPY ./.builds/shared/httpd-php-entrypoint.sh /usr/local/bin/
-COPY ./.builds/shared/create_user.sh /usr/local/bin/
+RUN set -eux; \
+    find /usr/local/bin -type f -exec chmod +x {} \;
+
+WORKDIR "/srv/www"
 
 STOPSIGNAL SIGWINCH
 ENTRYPOINT ["httpd-php-entrypoint.sh"]

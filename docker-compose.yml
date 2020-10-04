@@ -2,12 +2,7 @@ version: '3'
 services:
 
   apache24:
-    image: degobbis/apache24-alpine
-    build:
-      context: .
-      dockerfile: ./.builds/httpd/apache24/Dockerfile
-      args:
-        MY_TZ: ${MY_TZ:-UTC}
+    image: degobbis/apache24-alpine:latest
     container_name: apache24
     links:
       - mysql
@@ -16,11 +11,11 @@ services:
       - php74-fpm
       - mailhog
     volumes:
-      - ./.config/httpd/apache24/httpd.conf /usr/local/apache2/conf/httpd.conf
-      - ./.config/httpd/apache24/conf.d:/usr/local/apache2/conf.d
-      - ./.config/httpd/apache24/vhosts:/usr/local/apache2/vhosts
-      - ${LOG_DIR:-./.data/logs}:/var/log
-      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - ./.config/httpd/apache24/ca:/usr/local/apache2/ca:rw
+      - ./.config/httpd/apache24/conf.d:/usr/local/apache2/conf.d:rw
+      - ./.config/httpd/apache24/vhosts:/usr/local/apache2/vhosts:rw
+      - ./data/phpinfo:/srv/phpinfo:rw
+      - ${WWW_BASEDIR:-./data/www}:/srv/www:rw
       - pma:/srv/pma
       - phpsocket:/run/php
     ports:
@@ -29,7 +24,13 @@ services:
       - "8056:8056"
       - "8073:8073"
       - "8074:8074"
+      - "443:${MAP_POT_443:-8474}"
+      - "8400:8400"
+      - "8456:8456"
+      - "8473:8473"
+      - "8474:8474"
     environment:
+      TZ: ${MY_TZ:-UTC}
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       APP_USER_ID: ${APP_USER_ID:-1000}
       APP_GROUP_ID: ${APP_GROUP_ID:-1000}
@@ -37,92 +38,85 @@ services:
       - lampp
 
   php56-fpm:
-    image: degobbis/php56-fpm-alpine
-    build:
-      context: .
-      dockerfile: ./.builds/php/php56-fpm/Dockerfile
-      args:
-        MY_TZ: ${MY_TZ:-UTC}
+    image: degobbis/php56-fpm-alpine:latest
     container_name: php56-fpm
     links:
       - mailhog
       - mysql
     volumes:
-      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf
-      - ./.config/php/php56/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
-      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
-      - ./.config/php/php56/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
-      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf:rw
+      - ./.config/php/php56/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf:rw
+      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/z00-php-global-overrides.ini:rw
+      - ./.config/php/php56/php-version-overrides.ini:/usr/local/etc/php/conf.d/z99-php-version-overrides.ini:rw
+      - ./data/phpinfo:/srv/phpinfo:rw
+      - ${WWW_BASEDIR:-./data/www}:/srv/www:rw
       - phpsocket:/run/php
     environment:
+      TZ: ${MY_TZ:-UTC}
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       APP_USER_ID: ${APP_USER_ID:-1000}
       APP_GROUP_ID: ${APP_GROUP_ID:-1000}
+      PHP_ENV: ${PHP_ENV:-production}
+      XDEBUG_REMOTE_HOST: ${XDEBUG_REMOTE_HOST}
     networks:
       - lampp
 
   php73-fpm:
-    image: degobbis/php73-fpm-alpine
-    build:
-      context: .
-      dockerfile: ./.builds/php/php73-fpm/Dockerfile
-      args:
-        MY_TZ: ${MY_TZ:-UTC}
+    image: degobbis/php73-fpm-alpine:latest
     container_name: php73-fpm
     links:
       - mailhog
       - mysql
     volumes:
-      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf
-      - ./.config/php/php73/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
-      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
-      - ./.config/php/php73/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
-      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf:rw
+      - ./.config/php/php73/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf:rw
+      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/z00-php-global-overrides.ini:rw
+      - ./.config/php/php73/php-version-overrides.ini:/usr/local/etc/php/conf.d/z99-php-version-overrides.ini:rw
+      - ./data/phpinfo:/srv/phpinfo:rw
+      - ${WWW_BASEDIR:-./data/www}:/srv/www:rw
       - phpsocket:/run/php
     environment:
+      TZ: ${MY_TZ:-UTC}
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       APP_USER_ID: ${APP_USER_ID:-1000}
       APP_GROUP_ID: ${APP_GROUP_ID:-1000}
+      PHP_ENV: ${PHP_ENV:-development}
+      XDEBUG_REMOTE_HOST: ${XDEBUG_REMOTE_HOST}
     networks:
       - lampp
 
   php74-fpm:
-    image: degobbis/php74-fpm-alpine
-    build:
-      context: .
-      dockerfile: ./.builds/php/php74-fpm/Dockerfile
-      args:
-        MY_TZ: ${MY_TZ:-UTC}
+    image: degobbis/php74-fpm-alpine:latest
     container_name: php74-fpm
     links:
       - mailhog
       - mysql
     volumes:
-      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf
-      - ./.config/php/php74/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf
-      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/00-php-global-overrides.ini
-      - ./.config/php/php74/php-version-overrides.ini:/usr/local/etc/php/conf.d/99-php-version-overrides.ini
-      - ${WWW_BASEDIR:-./.data/www}:/srv/www
+      - ./.config/php/php-fpm-global-overrides.conf:/usr/local/etc/php-fpm.d/zzz-php-fpm-global-overrides.conf:rw
+      - ./.config/php/php74/php-fpm-overrides.conf:/usr/local/etc/php-fpm.d/zzzz-php-fpm-overrides.conf:rw
+      - ./.config/php/php-global-overrides.ini:/usr/local/etc/php/conf.d/z00-php-global-overrides.ini:rw
+      - ./.config/php/php74/php-version-overrides.ini:/usr/local/etc/php/conf.d/z99-php-version-overrides.ini:rw
+      - ./data/phpinfo:/srv/phpinfo:rw
+      - ${WWW_BASEDIR:-./data/www}:/srv/www:rw
       - phpsocket:/run/php
     environment:
+      TZ: ${MY_TZ:-UTC}
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       APP_USER_ID: ${APP_USER_ID:-1000}
       APP_GROUP_ID: ${APP_GROUP_ID:-1000}
+      PHP_ENV: ${PHP_ENV:-development}
+      XDEBUG_REMOTE_HOST: ${XDEBUG_REMOTE_HOST}
     networks:
       - lampp
 
   mysql:
-    image: degobbis/mariadb-alpine
-    build:
-      context: .
-      dockerfile: ./.builds/db/mariadb/Dockerfile
-      args:
-        MY_TZ: ${MY_TZ:-UTC}
+    image: degobbis/mariadb105-alpine:latest
     container_name: mysql
-    restart: unless-stopped
     volumes:
       - db-data-dir:/var/lib/mysql
+      - ./data/initDB:/docker-entrypoint-initdb.d
     environment:
+      TZ: ${MY_TZ:-UTC}
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWD:-root}
     ports:
@@ -145,14 +139,14 @@ services:
     links:
       - mysql
     volumes:
-      - ./.config/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php
+      - ./.config/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php:rw
       - pma:/var/www/html
     environment:
+      TZ: ${MY_TZ:-UTC}
       LC_ALL: ${MY_LOCALES:-en_GB.UTF-8}
       PMA_HOST: mysql
       PMA_PORT: 3306
       UPLOAD_LIMIT: 128M
-      PMA_ARBITRARY: 1
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWD:-root}
     networks:
       - lampp

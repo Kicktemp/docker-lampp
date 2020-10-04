@@ -1309,7 +1309,7 @@ installPECLModule() {
 			elif test $PHP_MAJMIN_VERSION -le 506; then
 				installPECLModule_actual="$1-2.5.5"
 			elif test $PHP_MAJMIN_VERSION -le 700; then
-				installPECLModule_actual="$1-2.9.6"
+				installPECLModule_actual="$1-2.9.8"
 			fi
 			;;
 		uopz)

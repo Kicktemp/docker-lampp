@@ -1,0 +1,60 @@
+version: '3'
+# Define common behavior
+x-php56:
+  &default-php56
+  build:
+    context: .
+    dockerfile: ./php/php56-fpm/Dockerfile
+    args:
+      MY_TZ: ${BUILD_TZ:-UTC}
+      VERSION: ${PHP56_VERSION}
+  image: degobbis/php56-fpm-alpine:latest
+
+x-php73:
+  &default-php73
+  build:
+    context: .
+    dockerfile: ./php/php73-fpm/Dockerfile
+    args:
+      MY_TZ: ${BUILD_TZ:-UTC}
+      VERSION: ${PHP73_VERSION}
+  image: degobbis/php73-fpm-alpine:latest
+
+x-php74:
+  &default-php74
+  build:
+    context: .
+    dockerfile: ./php/php74-fpm/Dockerfile
+    args:
+      MY_TZ: ${BUILD_TZ:-UTC}
+      VERSION: ${PHP74_VERSION}
+  image: degobbis/php74-fpm-alpine:latest
+
+x-php80:
+  &default-php80
+  build:
+    context: .
+    dockerfile: ./php/php80-fpm/Dockerfile
+    args:
+      MY_TZ: ${BUILD_TZ:-UTC}
+      VERSION: ${PHP80_VERSION}
+  image: degobbis/php80-fpm-alpine:latest
+
+services:
+  php56-latest:
+    *default-php56
+  php56-version:
+    << : *default-php56
+    image: degobbis/php56-fpm-alpine:${PHP56_VERSION}
+
+  php73-latest:
+    *default-php73
+  php73-version:
+    << : *default-php73
+    image: degobbis/php73-fpm-alpine:${PHP73_VERSION}
+
+  php74-latest:
+    *default-php74
+  php74-version:
+    << : *default-php74
+    image: degobbis/php74-fpm-alpine:${PHP74_VERSION}

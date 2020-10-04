@@ -1,8 +1,27 @@
-FROM php:7.3-fpm-alpine
+ARG VERSION
+ARG TAG="${VERSION:-7.3}-fpm-alpine"
 
-COPY ./.builds/shared/aliase.sh /etc/profile.d/
+FROM php:${TAG}
 
-ENV ENV="/etc/profile"
+COPY ./shared/aliase.sh /etc/profile.d/
+
+ARG MY_TZ
+ENV TZ=${MY_TZ} \
+    ENV="/etc/profile"
+
+RUN set -eux; \
+    apk upgrade --update; \
+    apk add --no-cache tzdata shadow; \
+    ln -sf /usr/share/zoneinfo/${MY_TZ} /etc/localtime; \
+    rm -rf /var/cache/apk/*
+
+COPY ./php/install-php-extensions /usr/local/bin/
+COPY ./shared/httpd-php-entrypoint.sh /usr/local/bin/
+COPY ./shared/create_user.sh /usr/local/bin/
+
+RUN set -eux; \
+    find /usr/local/bin -type f -exec chmod +x {} \;
+
 ENV PHPIZE_DEPS \
         autoconf \
         coreutils \
@@ -14,16 +33,6 @@ ENV PHPIZE_DEPS \
         make \
         pkgconf \
         re2c
-
-ARG MY_TZ
-RUN set -eux; \
-    apk upgrade --update; \
-    apk add -U tzdata shadow; \
-    cp /usr/share/zoneinfo/${MY_TZ} /etc/localtime; \
-    apk del tzdata; \
-    rm -rf /var/cache/apk/*
-
-COPY ./.builds/php/install-php-extensions /usr/local/bin/
 
 RUN install-php-extensions \
         bcmath \
@@ -48,9 +57,7 @@ RUN install-php-extensions \
 
 WORKDIR "/srv/www"
 
-COPY ./.builds/shared/httpd-php-entrypoint.sh /usr/local/bin/
-COPY ./.builds/shared/create_user.sh /usr/local/bin/
-
+STOPSIGNAL SIGQUIT
 EXPOSE 9000
-ENTRYPOINT ["httpd-php-entrypoint.sh","php-fpm"]
-#CMD ["/usr/local/sbin/php-fpm"]
+ENTRYPOINT ["httpd-php-entrypoint.sh"]
+CMD ["/usr/local/sbin/php-fpm"]
