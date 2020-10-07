@@ -6,7 +6,8 @@
 /.env
 
 # Exclutions.
-!/data/www/index.php
-!/data/www/.php
+!/data/www/joomla
+!/data/www/wordpress
+!/data/www/wordpress-multisite
 !/data/**/.gitkeep
 
